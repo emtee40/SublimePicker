@@ -15,34 +15,41 @@
      limitations under the License.
 -->
 
+<!-- TODO: Make sure to change the date range labels to use the new date format. -->
+<!-- TODO: Use auto sizing for the date header TextViews. -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/date_picker_header"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <LinearLayout
+    <android.support.v7.widget.GridLayout
         android:id="@+id/ll_header_date_single_cont"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:paddingStart="?attr/dialogPreferredPadding"
         android:paddingLeft="?attr/dialogPreferredPadding"
         android:paddingEnd="?attr/dialogPreferredPadding"
         android:paddingRight="?attr/dialogPreferredPadding"
-        android:paddingBottom="18dp">
+        android:paddingBottom="18dp"
+        app:rowCount="2"
+        app:columnCount="2">
 
         <!-- Top padding should stay on this view so that
          the touch target is a bit larger. -->
+        <!-- TODO: Rename the text appearance style to "SPWeekdayLabel..." -->
         <TextView
-            android:id="@+id/date_picker_header_year"
+            android:id="@+id/sp_date_picker_header_weekday"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="@style/SPYearLabelTextAppearance"
-            android:paddingTop="16dp" />
+            android:paddingTop="16dp"
+            app:layout_columnSpan="2" />
 
+        <!-- TODO: What should be the new maxLines value? -->
         <TextView
-            android:id="@+id/date_picker_header_date"
+            android:id="@+id/sp_date_picker_header_first_textView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="@style/SPDateLabelTextAppearance"
@@ -50,7 +57,17 @@
             android:maxLines="2"
             android:ellipsize="none" />
 
-    </LinearLayout>
+        <!-- TODO: What should be the new maxLines value? -->
+        <TextView
+            android:id="@+id/sp_date_picker_header_second_textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/SPDateLabelTextAppearance"
+            android:gravity="start"
+            android:maxLines="2"
+            android:ellipsize="none" />
+
+    </android.support.v7.widget.GridLayout>
 
     <LinearLayout
         android:id="@+id/ll_header_date_range_cont"

@@ -15,6 +15,7 @@
      limitations under the License.
 -->
 
+<!-- TODO: Use auto sizing for the date header TextViews. -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/date_picker_header"
@@ -34,15 +35,27 @@
 
         <!-- Top padding should stay on this view so that
          the touch target is a bit larger. -->
+        <!-- TODO: Rename the text appearance style to "SPWeekdayLabel..." -->
         <TextView
-            android:id="@+id/date_picker_header_year"
+            android:id="@+id/sp_date_picker_header_weekday"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="16dp"
-            android:textAppearance="@style/SPYearLabelTextAppearance" />
+            android:textAppearance="@style/SPYearLabelTextAppearance"
+            android:paddingTop="16dp" />
 
+        <!-- TODO: What should be the new maxLines value? -->
         <TextView
-            android:id="@+id/date_picker_header_date"
+            android:id="@+id/sp_date_picker_header_first_textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/SPDateLabelTextAppearance"
+            android:gravity="start"
+            android:maxLines="2"
+            android:ellipsize="none" />
+
+        <!-- TODO: What should be the new maxLines value? -->
+        <TextView
+            android:id="@+id/sp_date_picker_header_second_textView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="@style/SPDateLabelTextAppearance"

@@ -74,6 +74,7 @@ public class SublimeDatePicker extends FrameLayout {
 
     private Context mContext;
 
+    // TODO: There are lots of duplicate usages with these. Refactor to remove redundant usages.
     private SimpleDateFormat mYearFormat;
     private SimpleDateFormat mMonthDayFormat;
 
@@ -81,9 +82,10 @@ public class SublimeDatePicker extends FrameLayout {
     private ViewGroup mContainer;
 
     // Header views.
-    private LinearLayout llHeaderDateSingleCont;
-    private TextView mHeaderYear;
-    private TextView mHeaderMonthDay;
+    private ViewGroup llHeaderDateSingleCont;
+    private TextView mHeaderWeekday;
+    private TextView mHeaderFirstTextView;
+    private TextView mHeaderSecondTextView;
     private LinearLayout llHeaderDateRangeCont;
     private TextView tvHeaderDateStart;
     private TextView tvHeaderDateEnd;
@@ -116,6 +118,10 @@ public class SublimeDatePicker extends FrameLayout {
     private int mCurrentlyActivatedRangeItem = RANGE_ACTIVATED_NONE;
 
     private boolean mIsInLandscapeMode;
+
+    // Relative positions of (MD) and Y in the locale's date formatting style.
+    private int mLocaleMonthDayIndex;
+    private int mLocaleYearIndex;
 
     public SublimeDatePicker(Context context) {
         this(context, null);
@@ -169,12 +175,14 @@ public class SublimeDatePicker extends FrameLayout {
         addView(mContainer);
 
         // Set up header views.
-        final ViewGroup header = (ViewGroup) mContainer.findViewById(R.id.date_picker_header);
-        llHeaderDateSingleCont = (LinearLayout) header.findViewById(R.id.ll_header_date_single_cont);
-        mHeaderYear = (TextView) header.findViewById(R.id.date_picker_header_year);
-        mHeaderYear.setOnClickListener(mOnHeaderClickListener);
-        mHeaderMonthDay = (TextView) header.findViewById(R.id.date_picker_header_date);
-        mHeaderMonthDay.setOnClickListener(mOnHeaderClickListener);
+        final ViewGroup header = mContainer.findViewById(R.id.date_picker_header);
+        llHeaderDateSingleCont = header.findViewById(R.id.ll_header_date_single_cont);
+        mHeaderWeekday = header.findViewById(R.id.sp_date_picker_header_weekday);
+        mHeaderWeekday.setOnClickListener(mOnHeaderClickListener);
+        mHeaderSecondTextView = header.findViewById(R.id.sp_date_picker_header_second_textView);
+        mHeaderSecondTextView.setOnClickListener(mOnHeaderClickListener);
+        mHeaderFirstTextView = header.findViewById(R.id.sp_date_picker_header_first_textView);
+        mHeaderFirstTextView.setOnClickListener(mOnHeaderClickListener);
 
         llHeaderDateRangeCont = (LinearLayout) header.findViewById(R.id.ll_header_date_range_cont);
         tvHeaderDateStart = (TextView) header.findViewById(R.id.tv_header_date_start);
@@ -207,8 +215,9 @@ public class SublimeDatePicker extends FrameLayout {
         }
 
         if (headerTextColor != null) {
-            mHeaderYear.setTextColor(headerTextColor);
-            mHeaderMonthDay.setTextColor(headerTextColor);
+            mHeaderWeekday.setTextColor(headerTextColor);
+            mHeaderSecondTextView.setTextColor(headerTextColor);
+            mHeaderFirstTextView.setTextColor(headerTextColor);
         }
 
         // Set up header background, if available.
@@ -386,9 +395,11 @@ public class SublimeDatePicker extends FrameLayout {
         public void onClick(View v) {
             SUtils.vibrateForDatePicker(SublimeDatePicker.this);
 
-            if (v.getId() == R.id.date_picker_header_year) {
-                setCurrentView(VIEW_YEAR);
-            } else if (v.getId() == R.id.date_picker_header_date) {
+            if (v.getId() == R.id.sp_date_picker_header_second_textView) {
+                setCurrentView(mLocaleMonthDayIndex == 0 ? VIEW_YEAR : VIEW_MONTH_DAY);
+            } else if (v.getId() == R.id.sp_date_picker_header_first_textView) {
+                setCurrentView(mLocaleMonthDayIndex == 0 ? VIEW_MONTH_DAY : VIEW_YEAR);
+            } else if (v.getId() == R.id.sp_date_picker_header_weekday) {
                 setCurrentView(VIEW_MONTH_DAY);
             } else if (v.getId() == R.id.tv_header_date_start) {
                 mCurrentlyActivatedRangeItem = RANGE_ACTIVATED_START;
@@ -406,8 +417,7 @@ public class SublimeDatePicker extends FrameLayout {
     };
 
     private void onLocaleChanged(Locale locale) {
-        final TextView headerYear = mHeaderYear;
-        if (headerYear == null) {
+        if (getHeaderYearView() == null) {
             // Abort, we haven't initialized yet. This method will get called
             // again later after everything has been set up.
             return;
@@ -425,22 +435,23 @@ public class SublimeDatePicker extends FrameLayout {
         mMonthDayFormat = new SimpleDateFormat(datePattern, locale);
         mYearFormat = new SimpleDateFormat("y", locale);
 
+        determineLocale_MD_Y_Indices();
         // Update the header text.
         onCurrentDateChanged(false);
     }
 
+    private TextView getHeaderYearView() {
+        return mLocaleYearIndex == 0 ? mHeaderFirstTextView : mHeaderSecondTextView;
+    }
+
     private void onCurrentDateChanged(boolean announce) {
-        if (mHeaderYear == null) {
+        if (getHeaderYearView() == null) {
             // Abort, we haven't initialized yet. This method will get called
             // again later after everything has been set up.
             return;
         }
 
-        final String year = mYearFormat.format(mCurrentDate.getStartDate().getTime());
-        mHeaderYear.setText(year);
-
-        final String monthDay = mMonthDayFormat.format(mCurrentDate.getStartDate().getTime());
-        mHeaderMonthDay.setText(monthDay);
+        updateSingleDateDisplay();
 
         final String yearStrStart = mYearFormat.format(mCurrentDate.getStartDate().getTime());
         final String monthDayStrStart = mMonthDayFormat.format(mCurrentDate.getStartDate().getTime());
@@ -500,8 +511,9 @@ public class SublimeDatePicker extends FrameLayout {
                 break;
             case VIEW_YEAR:
                 if (mCurrentView != viewIndex) {
-                    mHeaderMonthDay.setActivated(false);
-                    mHeaderYear.setActivated(true);
+                    mHeaderWeekday.setActivated(false);  // Not dependent on locale ordering of (MD) and Y
+                    mHeaderFirstTextView.setActivated(mLocaleYearIndex == 0);
+                    mHeaderSecondTextView.setActivated(mLocaleYearIndex != 0);
                     mAnimator.setDisplayedChild(VIEW_YEAR);
                     mCurrentView = viewIndex;
                 }
@@ -589,6 +601,126 @@ public class SublimeDatePicker extends FrameLayout {
         }
     }
 
+    /**
+     * Determine the relative positions of (MD) and Y according to the formatting style
+     * of the current locale.
+     */
+    private void determineLocale_MD_Y_Indices() {
+        String formattedDate = formatMonthDayYear(mCurrentDate.getStartDate());
+        // Get the (MD) and Y parts of the formatted date in the current locale,
+        // so that we can compare their relative positions.
+        //
+        // You may be wondering why we need this method at all.
+        // "Just split() the formattedDate string around the year delimiter
+        // to get the two parts in an array already positioned correctly!
+        // Then setText() on mFirstTextView and mSecondTextView with the contents of that array!"
+        // That is harder than it sounds.
+        // Different locales use different year delimiters, and some don't use one at all.
+        // For example, a fully formatted date in the French locale is "30 juin 2009".
+        String monthAndDay = formatMonthAndDay(mCurrentDate.getStartDate());
+        String year = extractYearFromFormattedDate(formattedDate, monthAndDay);
+
+        // All locales format the M and D together; which comes
+        // first is not a necessary consideration for the comparison.
+        if (formattedDate.indexOf(monthAndDay) < formattedDate.indexOf(year/*not null*/)) {
+            mLocaleMonthDayIndex = 0;
+            mLocaleYearIndex = 1;
+        } else {
+            mLocaleYearIndex = 0;
+            mLocaleMonthDayIndex = 1;
+        }
+    }
+
+    private static String formatMonthDayYear(Calendar calendar) {
+        int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH | DateUtils.FORMAT_SHOW_YEAR;
+        return DateFormatHelper.formatDate(calendar, flags);
+    }
+
+    private static String formatMonthAndDay(Calendar calendar) {
+        int flags = DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH | DateUtils.FORMAT_NO_YEAR;
+        return DateFormatHelper.formatDate(calendar, flags);
+    }
+
+    private String extractYearFromFormattedDate(String formattedDate, String monthAndDay) {
+        final String year = mYearFormat.format(mCurrentDate.getStartDate().getTime());
+        for (String part : formattedDate.split(monthAndDay)) {
+            if (part.contains(year)) {
+                return part;
+            }
+        }
+        // We will NEVER reach here, as long as the parameters are valid strings.
+        // We don't want this because it is not localized.
+        return year;
+    }
+
+    private void updateSingleDateDisplay() {
+        if (mHeaderWeekday != null) {
+            mHeaderWeekday.setText(mCurrentDate.getStartDate().getDisplayName(Calendar.DAY_OF_WEEK,
+                    Calendar.LONG, Locale.getDefault()));
+        }
+        String fullDate = formatMonthDayYear(mCurrentDate.getStartDate());
+        String monthAndDay = formatMonthAndDay(mCurrentDate.getStartDate());
+        String year = mYearFormat.format(mCurrentDate.getStartDate().getTime());
+
+        int yearStart = fullDate.indexOf(year);
+        int yearEnd = yearStart + year.length();
+        int monthDayStart = fullDate.indexOf(monthAndDay);
+        int monthDayEnd = monthDayStart + monthAndDay.length();
+
+        boolean processed = false;
+        if (monthDayStart != -1 && yearStart != -1) {
+            if (mLocaleMonthDayIndex < mLocaleYearIndex) {
+                if (yearStart - monthDayEnd <= 2) {
+                    monthAndDay = fullDate.substring(0, yearStart);
+                    year = fullDate.substring(yearStart, fullDate.length());
+                    processed = true;
+                }
+            } else {
+                if (monthDayStart - yearEnd <= 2) {
+                    year = fullDate.substring(0, monthDayStart);
+                    monthAndDay = fullDate.substring(monthDayStart, fullDate.length());
+                    processed = true;
+                }
+            }
+        } else {
+            // Some locales format the standalone month-day or standalone year differently
+            // than it appears in the full date. For instance, Turkey is one such locale.
+            // TODO: You may want to consider making localized string resources of the
+            // pattern strings used to format the (MD) and (Y) parts separately.
+            //
+            // We can't compare the relative indices of (MD) and (Y) determined earlier,
+            // because the results are dubious if we're here.
+            // It is appropriate to assume yearStart != -1. The case where the raw year
+            // is NOT present in the full date string is hard to imagine. As such,
+            // even though monthDayStart == -1, we can still determine the relative indices
+            // of (MD) and (Y) as follows.
+            //
+            // If yearStart is non-zero positive, then we can probably guess monthDayStart
+            // comes before the former.
+            if (yearStart > 0) {
+                monthAndDay = fullDate.substring(0, yearStart);
+                year = fullDate.substring(yearStart, fullDate.length());
+                mLocaleMonthDayIndex = 0;
+                mLocaleYearIndex = 1;
+            } else {
+                year = fullDate.substring(0, yearEnd);
+                monthAndDay = fullDate.substring(yearEnd, fullDate.length());
+                mLocaleYearIndex = 0;
+                mLocaleMonthDayIndex = 1;
+            }
+            processed = true;
+        }
+
+        // Year delimiters longer than 2 characters, fall back on pre-2.1.1 implementation.
+        if (!processed) {
+            // The month-day is already formatted appropriately
+            year = extractYearFromFormattedDate(fullDate, monthAndDay);
+        }
+
+        mHeaderFirstTextView.setText(mLocaleMonthDayIndex == 0 ? monthAndDay : year);
+        mHeaderSecondTextView.setText(mLocaleMonthDayIndex == 0 ? year : monthAndDay);
+    }
+
     private void switchToSingleDateView() {
         mCurrentlyActivatedRangeItem = RANGE_ACTIVATED_NONE;
 
@@ -596,8 +728,9 @@ public class SublimeDatePicker extends FrameLayout {
         llHeaderDateRangeCont.setVisibility(View.INVISIBLE);
         llHeaderDateSingleCont.setVisibility(View.VISIBLE);
 
-        mHeaderMonthDay.setActivated(true);
-        mHeaderYear.setActivated(false);
+        mHeaderWeekday.setActivated(true);  // Not dependent on locale ordering of (MD) and Y
+        mHeaderFirstTextView.setActivated(mLocaleMonthDayIndex == 0);
+        mHeaderSecondTextView.setActivated(mLocaleMonthDayIndex != 0);
     }
 
     private void switchToDateRangeView() {
@@ -718,8 +851,9 @@ public class SublimeDatePicker extends FrameLayout {
         mContainer.setEnabled(enabled);
         mDayPickerView.setEnabled(enabled);
         mYearPickerView.setEnabled(enabled);
-        mHeaderYear.setEnabled(enabled);
-        mHeaderMonthDay.setEnabled(enabled);
+        mHeaderWeekday.setEnabled(enabled);
+        mHeaderSecondTextView.setEnabled(enabled);
+        mHeaderFirstTextView.setEnabled(enabled);
     }
 
     @Override
