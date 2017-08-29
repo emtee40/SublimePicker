@@ -33,7 +33,7 @@ ext {
     buildToolsVersion = '26.0.1'
 
     // SublimePicker versioning
-    versionName = '3.0'
+    versionName = '3.0-alpha1'
     versionCode = 6
 
     // Library dependencies
