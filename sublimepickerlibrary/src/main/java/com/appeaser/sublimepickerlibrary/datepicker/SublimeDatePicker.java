@@ -48,7 +48,6 @@ import android.widget.TextView;
 import android.widget.ViewAnimator;
 
 import com.appeaser.sublimepickerlibrary.R;
-import com.appeaser.sublimepickerlibrary.common.DateTimePatternHelper;
 import com.appeaser.sublimepickerlibrary.utilities.AccessibilityUtils;
 import com.appeaser.sublimepickerlibrary.utilities.Config;
 import com.appeaser.sublimepickerlibrary.utilities.SUtils;
@@ -74,9 +73,7 @@ public class SublimeDatePicker extends FrameLayout {
 
     private Context mContext;
 
-    // TODO: There are lots of duplicate usages with these. Refactor to remove redundant usages.
     private SimpleDateFormat mYearFormat;
-    private SimpleDateFormat mMonthDayFormat;
 
     // Top-level container.
     private ViewGroup mContainer;
@@ -422,19 +419,7 @@ public class SublimeDatePicker extends FrameLayout {
             // again later after everything has been set up.
             return;
         }
-
-        // Update the date formatter.
-        String datePattern;
-
-        if (SUtils.isApi_18_OrHigher()) {
-            datePattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "EMMMd");
-        } else {
-            datePattern = DateTimePatternHelper.getBestDateTimePattern(locale, DateTimePatternHelper.PATTERN_EMMMd);
-        }
-
-        mMonthDayFormat = new SimpleDateFormat(datePattern, locale);
         mYearFormat = new SimpleDateFormat("y", locale);
-
         determineLocale_MD_Y_Indices();
         // Update the header text.
         onCurrentDateChanged(false);
@@ -453,23 +438,19 @@ public class SublimeDatePicker extends FrameLayout {
 
         updateSingleDateDisplay();
 
-        final String yearStrStart = mYearFormat.format(mCurrentDate.getStartDate().getTime());
-        final String monthDayStrStart = mMonthDayFormat.format(mCurrentDate.getStartDate().getTime());
-        final String dateStrStart = yearStrStart + "\n" + monthDayStrStart;
+        final String weekdayStrStart = getWeekdayDisplayName(mCurrentDate.getStartDate());
+        final String dateStrStart = weekdayStrStart + "\n" + formatMonthDayYear(mCurrentDate.getStartDate());
 
-        final String yearStrEnd = mYearFormat.format(mCurrentDate.getEndDate().getTime());
-        final String monthDayStrEnd = mMonthDayFormat.format(mCurrentDate.getEndDate().getTime());
-        final String dateStrEnd = yearStrEnd + "\n" + monthDayStrEnd;
+        final String weekdayStrEnd = getWeekdayDisplayName(mCurrentDate.getEndDate());
+        final String dateStrEnd = weekdayStrEnd + "\n" + formatMonthDayYear(mCurrentDate.getEndDate());
 
         SpannableString spDateStart = new SpannableString(dateStrStart);
-        // If textSize is 34dp for land, use 0.47f
-        //spDateStart.setSpan(new RelativeSizeSpan(mIsInLandscapeMode ? 0.47f : 0.7f),
         spDateStart.setSpan(new RelativeSizeSpan(0.7f),
-                0, yearStrStart.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                0, weekdayStrStart.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
         SpannableString spDateEnd = new SpannableString(dateStrEnd);
         spDateEnd.setSpan(new RelativeSizeSpan(0.7f),
-                0, yearStrEnd.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                0, weekdayStrEnd.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
         // API <= 16
         if (!mIsInLandscapeMode && !SUtils.isApi_17_OrHigher()) {
@@ -653,10 +634,13 @@ public class SublimeDatePicker extends FrameLayout {
         return year;
     }
 
+    private static String getWeekdayDisplayName(Calendar date) {
+        return date.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.getDefault());
+    }
+
     private void updateSingleDateDisplay() {
         if (mHeaderWeekday != null) {
-            mHeaderWeekday.setText(mCurrentDate.getStartDate().getDisplayName(Calendar.DAY_OF_WEEK,
-                    Calendar.LONG, Locale.getDefault()));
+            mHeaderWeekday.setText(getWeekdayDisplayName(mCurrentDate.getStartDate()));
         }
         String fullDate = formatMonthDayYear(mCurrentDate.getStartDate());
         String monthAndDay = formatMonthAndDay(mCurrentDate.getStartDate());
